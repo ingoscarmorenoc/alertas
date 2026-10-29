@@ -1,0 +1,3 @@
+# Registre aquí cada compra que realice (una fila por operación). Borre la fila cuando venda.
+# Ejemplo: AAPL,230.50,10,2026-10-29
+ticker,precio_compra,cantidad,fecha_compra
