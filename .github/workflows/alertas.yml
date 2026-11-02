@@ -1,0 +1,71 @@
+name: Alertas de bolsa
+
+on:
+  schedule:
+    - cron: "0 15-21 * * 1-5"   # cada hora de 10:00 a 16:00 hora Colombia, lunes a viernes
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "reporte | hora | ticker | dividendos"
+        default: "reporte"
+      ticker:
+        description: "Solo para modo ticker (ej. NVDA o ECOPETROL.CL)"
+        default: ""
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: bolsa
+  cancel-in-progress: false
+
+jobs:
+  ejecutar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Analizar y enviar alertas
+        env:
+          MODO: ${{ github.event.inputs.modo || 'hora' }}
+          TICKER: ${{ github.event.inputs.ticker }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          EMAIL_USUARIO: ${{ secrets.EMAIL_USUARIO }}
+          EMAIL_CLAVE_APP: ${{ secrets.EMAIL_CLAVE_APP }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          COMISION_US: ${{ vars.COMISION_US }}
+          COMISION_CO: ${{ vars.COMISION_CO }}
+          PANEL_URL: ${{ vars.PANEL_URL }}
+        run: python main.py "$MODO" "$TICKER"
+      - name: Guardar operaciones y panel
+        run: |
+          git config user.name "bolsa-bot"
+          git config user.email "bolsa-bot@users.noreply.github.com"
+          git add datos/
+          git diff --cached --quiet || (git commit -m "Actualiza datos" && git pull --rebase && git push)
+      - name: Preparar panel
+        run: |
+          mkdir -p publico
+          cp datos/panel.html publico/index.html 2>/dev/null || echo "<p>El panel se generará en la próxima ejecución.</p>" > publico/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: publico
+
+  publicar:
+    needs: ejecutar
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
