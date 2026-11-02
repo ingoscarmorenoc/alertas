@@ -1,62 +1,43 @@
-"""Parámetros de la estrategia. Ajuste aquí sin tocar el resto del código."""
+"""Parámetros del sistema. Ajuste aquí sin tocar el resto del código."""
 import os
 
-# ---------------- Universos de análisis ----------------
-# Mediano plazo – EE. UU. (acciones líquidas de gran capitalización)
-UNIVERSO_US = [
-    "AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "AVGO", "TSLA", "JPM", "V",
-    "MA", "UNH", "XOM", "JNJ", "PG", "HD", "COST", "ABBV", "MRK", "LLY",
-    "PEP", "KO", "BAC", "WMT", "CVX", "ADBE", "CRM", "AMD", "NFLX", "ORCL",
-    "CSCO", "INTC", "QCOM", "TXN", "AMAT", "MU", "IBM", "CAT", "DE", "GE",
-    "HON", "UPS", "LMT", "RTX", "BA", "GS", "MS", "C", "WFC", "AXP",
-    "SBUX", "MCD", "NKE", "DIS", "T", "VZ", "PFE", "TMO", "ABT", "DHR",
-    "MDT", "LOW", "TGT", "PLTR", "UBER",
-]
+# ---------------- Acciones vigiladas ----------------
+LISTA_CO = ["ECOPETROL.CL", "GEB.CL", "PFCIBEST.CL", "PFGRUPSURA.CL",
+            "PROMIGAS.CL", "ISA.CL", "EXITO.CL"]
+LISTA_US = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "AMD", "TSLA",
+            "ORCL", "CRM", "ADBE", "NFLX", "PLTR", "INTC", "QCOM", "MU", "CSCO"]
 
-# Mediano plazo – Colombia (sufijo .CL = Bolsa de Valores de Colombia en Yahoo Finance)
-# Se incluyen los ADR colombianos que cotizan en NYSE (EC, CIB, AVAL), más líquidos.
-UNIVERSO_CO = [
-    "ECOPETROL.CL", "BCOLOMBIA.CL", "PFBCOLOM.CL", "ISA.CL", "GEB.CL", "CELSIA.CL",
-    "GRUPOSURA.CL", "PFGRUPSURA.CL", "GRUPOARGOS.CL", "PFGRUPOARG.CL",
-    "CEMARGOS.CL", "PFCEMARGOS.CL", "GRUPOAVAL.CL", "PFAVAL.CL", "CORFICOLCF.CL",
-    "PFCORFICOL.CL", "PFDAVVNDA.CL", "BOGOTA.CL", "MINEROS.CL", "PROMIGAS.CL",
-    "TERPEL.CL", "CNEC.CL", "BVC.CL",
-    "EC", "CIB", "AVAL",
-]
+NOMBRES = {
+    "ECOPETROL.CL": "Ecopetrol", "GEB.CL": "Grupo Energía Bogotá", "PFCIBEST.CL": "Grupo Cibest (pref.)",
+    "PFGRUPSURA.CL": "Grupo Sura (pref.)", "PROMIGAS.CL": "Promigas", "ISA.CL": "ISA", "EXITO.CL": "Grupo Éxito",
+    "AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "Nvidia", "GOOGL": "Alphabet", "AMZN": "Amazon",
+    "META": "Meta", "AVGO": "Broadcom", "AMD": "AMD", "TSLA": "Tesla", "ORCL": "Oracle",
+    "CRM": "Salesforce", "ADBE": "Adobe", "NFLX": "Netflix", "PLTR": "Palantir", "INTC": "Intel",
+    "QCOM": "Qualcomm", "MU": "Micron", "CSCO": "Cisco",
+}
 
-# Largo plazo – candidatas de dividendos
-DIVIDENDOS_US = [
-    "JNJ", "PG", "KO", "PEP", "ABBV", "MCD", "ADP", "ITW", "LOW", "TGT",
-    "CL", "KMB", "XOM", "CVX", "O", "ED", "NEE", "WMT", "HD", "MSFT",
-    "TXN", "AVGO", "CAT", "CB", "AFL", "SYY", "GPC", "EMR", "VZ", "PFE",
-    "MDT", "ABT", "LMT", "UPS", "JPM", "PM",
-]
-DIVIDENDOS_CO = UNIVERSO_CO
+# Dividendos (largo plazo)
+DIVIDENDOS_US = ["JNJ", "PG", "KO", "PEP", "ABBV", "MCD", "ADP", "ITW", "LOW", "CL", "KMB",
+                 "XOM", "CVX", "O", "ED", "NEE", "WMT", "HD", "MSFT", "TXN", "AVGO", "CAT",
+                 "CB", "AFL", "SYY", "EMR", "VZ", "PFE", "ABT", "LMT", "JPM", "PM"]
+DIVIDENDOS_CO = LISTA_CO
 
-# ---------------- Estrategia de mediano plazo ----------------
-OBJETIVO_NETO = 0.02        # 2 % de ganancia neta por operación (ya descontadas comisiones)
-STOP_LOSS = 0.015           # pérdida máxima tolerada por operación (precio)
-MAX_DIAS_OPERACION = 15     # días hábiles máximos que se mantiene una operación
-ANOS_BACKTEST = 3           # historial evaluado
+# ---------------- Estrategia de corto plazo (velas de 1 hora) ----------------
+OBJETIVO_NETO = 0.02      # ganancia neta buscada por operación (descontadas comisiones)
+STOP_LOSS = 0.01          # pérdida máxima tolerada (precio)
+MAX_BARRAS = 21           # horas de mercado máximas por operación (~3 días)
+EMA_RAPIDA, EMA_LENTA, EMA_TENDENCIA, EMA_FONDO = 9, 21, 50, 200
+RSI_MIN, RSI_MAX = 45, 70
 
-# Comisión por operación (compra y venta, como fracción). Ajústela según su comisionista.
 COMISION = {
     "US": float(os.getenv("COMISION_US") or 0.0),
     "CO": float(os.getenv("COMISION_CO") or 0.006),
 }
 
-# Filtros de la señal técnica
-RSI_MIN, RSI_MAX = 35, 58   # retroceso dentro de tendencia alcista, sin sobrecompra
-ATR_MIN = 0.012             # volatilidad diaria mínima para que el 2 % sea alcanzable
-LIQUIDEZ_MIN = {"US": 20_000_000, "CO": 300_000_000}  # monto diario negociado (USD / COP)
+# Confianza según el backtest de 2 años en velas horarias
+MIN_OPERACIONES = 10
+ACIERTO_ALTA = 0.50
 
-# Calidad mínima exigida en el backtest
-MIN_OPERACIONES = 8         # operaciones históricas mínimas para confiar en la estadística
-ACIERTO_MIN = 0.50          # % mínimo de operaciones que alcanzaron el +2 %
-
-TOP_N = 10
-ZONA_ENTRADA_SUP = 0.003    # alerta de compra si el precio está hasta 0,3 % sobre el cierre previo
-ZONA_ENTRADA_INF = 0.03     # ... y no más de 3 % por debajo (caída fuerte = señal invalidada)
-
-# Largo plazo: día en que se envía el ranking de dividendos (0 = lunes)
-DIA_DIVIDENDOS = 0
+# ---------------- Horarios (hora Colombia) ----------------
+HORA_REPORTE = 10         # reporte completo + panel
+DIA_DIVIDENDOS = 0        # 0 = lunes

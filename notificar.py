@@ -43,3 +43,15 @@ def correo(asunto, html, adjuntos=None):
     with smtplib.SMTP_SSL(os.getenv("EMAIL_SMTP") or "smtp.gmail.com", 465) as s:
         s.login(usuario, clave)
         s.send_message(msg)
+
+
+def telegram_documento(ruta, texto=""):
+    token, chat = os.getenv("TELEGRAM_TOKEN"), os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat:
+        return
+    with open(ruta, "rb") as f:
+        r = requests.post(f"https://api.telegram.org/bot{token}/sendDocument",
+                          data={"chat_id": chat, "caption": texto[:1000], "parse_mode": "HTML"},
+                          files={"document": (os.path.basename(ruta), f, "text/html")}, timeout=60)
+    if not r.ok:
+        print(f"[error] Telegram documento: {r.text}")
